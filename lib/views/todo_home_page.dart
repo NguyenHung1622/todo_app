@@ -15,8 +15,8 @@ class _TodoHomePageState extends State<TodoHomePage> {
   List<Task> _tasks = [];
   bool _showOnlyPending = false;
   String _selectedCategoryFilter = 'Tất cả';
-  final List<String> _categories = ['Chung', 'Công việc', 'Học tập', 'Cá nhân'];
-  final List<String> _filterOptions = ['Tất cả', 'Chung', 'Công việc', 'Học tập', 'Cá nhân'];
+  final List<String> _categories = ['Công việc', 'Học tập', 'Cá nhân'];
+  final List<String> _filterOptions = ['Tất cả', 'Công việc', 'Học tập', 'Cá nhân'];
 
   @override
   void initState() {
@@ -174,16 +174,20 @@ class _TodoHomePageState extends State<TodoHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Logic lọc dữ liệu
-    List<Task> filteredTasks = _tasks;
+    // 1. Lấy danh sách task theo Category đang chọn để tính tiến độ
+    final progressTasks = _selectedCategoryFilter == 'Tất cả' 
+        ? _tasks 
+        : _tasks.where((t) => t.category == _selectedCategoryFilter).toList();
+
+    final completedCount = progressTasks.where((e) => e.isDone).length;
+    final totalCount = progressTasks.length;
+    final progressValue = totalCount == 0 ? 0.0 : completedCount / totalCount;
+
+    // 2. Lấy danh sách hiển thị (kết hợp cả lọc "Chưa xong")
+    List<Task> filteredTasks = progressTasks;
     if (_showOnlyPending) {
       filteredTasks = filteredTasks.where((t) => !t.isDone).toList();
     }
-    if (_selectedCategoryFilter != 'Tất cả') {
-      filteredTasks = filteredTasks.where((t) => t.category == _selectedCategoryFilter).toList();
-    }
-
-    final completedCount = _tasks.where((e) => e.isDone).length;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -195,7 +199,6 @@ class _TodoHomePageState extends State<TodoHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -216,8 +219,8 @@ class _TodoHomePageState extends State<TodoHomePage> {
                 ],
               ),
             ),
-
-            // Progress Card
+            
+            // PROGRESS CARD (Thay đổi theo Filter)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -241,10 +244,15 @@ class _TodoHomePageState extends State<TodoHomePage> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Tiến độ hoàn thành', style: TextStyle(color: Colors.white, fontSize: 16)),
+                        Text(
+                          _selectedCategoryFilter == 'Tất cả' 
+                            ? 'Tiến độ tổng hợp' 
+                            : 'Tiến độ $_selectedCategoryFilter', 
+                          style: const TextStyle(color: Colors.white, fontSize: 16)
+                        ),
                         const SizedBox(height: 8),
                         Text(
-                          '$completedCount / ${_tasks.length} đã xong',
+                          '$completedCount / $totalCount đã xong',
                           style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -253,13 +261,13 @@ class _TodoHomePageState extends State<TodoHomePage> {
                       alignment: Alignment.center,
                       children: [
                         CircularProgressIndicator(
-                          value: _tasks.isEmpty ? 0 : completedCount / _tasks.length,
+                          value: progressValue,
                           backgroundColor: Colors.white24,
                           color: Colors.white,
                           strokeWidth: 6,
                         ),
                         Text(
-                          _tasks.isEmpty ? '0%' : '${((completedCount / _tasks.length) * 100).toInt()}%',
+                          '${(progressValue * 100).toInt()}%',
                           style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -270,8 +278,8 @@ class _TodoHomePageState extends State<TodoHomePage> {
             ),
 
             const SizedBox(height: 25),
-
-            // Category Filter Bar (NHƯ TRONG ẢNH CỦA BẠN)
+            
+            // Filter Tabs
             SizedBox(
               height: 40,
               child: ListView.builder(
@@ -291,7 +299,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                           _selectedCategoryFilter = category;
                         });
                       },
-                      selectedColor: const Color(0xFF4A90E2).withOpacity(0.8), // Màu xanh giống ảnh của bạn
+                      selectedColor: const Color(0xFF4A90E2).withOpacity(0.8),
                       backgroundColor: const Color(0xFF3C3A4F),
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.white : Colors.grey,
@@ -304,10 +312,8 @@ class _TodoHomePageState extends State<TodoHomePage> {
                 },
               ),
             ),
-
             const SizedBox(height: 15),
-
-            // Task List
+            
             Expanded(
               child: filteredTasks.isEmpty
                   ? const Center(
